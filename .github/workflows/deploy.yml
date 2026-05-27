@@ -6,8 +6,8 @@ concurrency:
 
 on:
   schedule:
-    # 凌晨任务：北京时间每天 01:00（UTC 前一天 17:00）
-    - cron: '0 17 * * *'
+    # 早晨任务：北京时间每天 06:00 触发，配合随机延迟实现 06:00-07:00 之间随机执行
+    - cron: '0 22 * * *'
     # 早间任务：北京时间每天 05:00（UTC 前一天 21:00）
     #- cron: '0 21 * * *'
     # 午间任务：北京时间每天 11:40（UTC 03:40）
@@ -22,6 +22,12 @@ jobs:
     environment: AutoRead  # 指定环境
 
     steps:
+
+    - name: Random delay (0-59 min)
+      run: |
+        DELAY=$((RANDOM % 3600))
+        echo "Sleeping for $DELAY seconds ($((DELAY / 60)) min $((DELAY % 60)) sec)"
+        sleep $DELAY
 
     - name: Set DNS to Google's DNS
       run: |
