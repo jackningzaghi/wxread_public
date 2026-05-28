@@ -1,15 +1,11 @@
 name: wxread
 
-concurrency:
-  group: ${{ github.workflow }} # 使用工作流名称作为并发组的key
-  cancel-in-progress: true    # 取消任何正在进行的相同并发组的工作流
-
 on:
   schedule:
-    # 早晨任务：北京时间每天 05:00 触发，配合随机延迟实现 05:00-05:20 之间随机执行
-    - cron: '0 21 * * *'
-    # 早间任务：北京时间每天 05:00（UTC 前一天 21:00）
-    #- cron: '0 21 * * *'
+    # 先行任务：北京时间每天 02:30 触发，配合随机延迟实现 02:30-02:50 之间随机执行
+    - cron: '30 18 * * *'
+    # 候补任务：北京时间每天 04:00 触发，若 02:30 因 Actions 拥堵或仓库不活跃判定导致延迟/跳过，则再次执行阅读，阅读完成后等待至 07:30 推送
+    - cron: '0 20 * * *'
     # 午间任务：北京时间每天 11:40（UTC 03:40）
     #- cron: '40 3 * * *'
     # 晚间任务：北京时间每天 22:00（UTC 14:00）
@@ -20,6 +16,8 @@ jobs:
   deploy:
     runs-on: ubuntu-22.04
     environment: AutoRead  # 指定环境
+    permissions:
+      contents: write  # 允许 git push last_read.txt
 
     steps:
 

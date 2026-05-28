@@ -1,11 +1,14 @@
 # main.py 主逻辑：包括字段拼接、模拟请求
 import json
+import subprocess
+import sys
 import time
 import random
 import logging
 import hashlib
 import requests
 import urllib.parse
+from datetime import datetime, timezone, timedelta
 from push import push
 from log_utils import setup_logging
 from config import data, headers, cookies, READ_NUM, PUSH_METHOD, book, chapter
@@ -73,12 +76,27 @@ def refresh_cookie():
         raise Exception(ERROR_CODE)
 
 try:
-    refresh_cookie()
-    index = 1
-    lastTime = int(time.time()) - 30
-    logging.info(f"一共需要阅读 {READ_NUM} 次。")
+    # 幂等判断：若当日已有先行 cron 完成阅读，则跳过阅读直接等待推送
+    beijing_tz = timezone(timedelta(hours=8))
+    today = datetime.now(beijing_tz).strftime('%Y-%m-%d')
+    skip_reading = False
+    try:
+        with open('last_read.txt', 'r') as f:
+            if f.read().strip() == today:
+                skip_reading = True
+    except FileNotFoundError:
+        pass
 
-    while index <= READ_NUM:
+    if skip_reading:
+        logging.info(f"今日（{today}）已完成阅读，无需重复执行，退出。")
+        sys.exit(0)
+    else:
+        refresh_cookie()
+        index = 1
+        lastTime = int(time.time()) - 30
+        logging.info(f"一共需要阅读 {READ_NUM} 次。")
+
+    while not skip_reading and index <= READ_NUM:
         data.pop('s')
         data['b'] = random.choice(book)
         data['c'] = random.choice(chapter)
@@ -110,6 +128,27 @@ try:
             refresh_cookie()
 
     logging.info("阅读脚本已完成。")
+
+    if not skip_reading:
+        # 持久化当日阅读状态，供候补 cron 幂等判断
+        with open('last_read.txt', 'w') as f:
+            f.write(today)
+        subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=False)
+        subprocess.run(['git', 'config', 'user.email', 'github-actions[bot]@users.noreply.github.com'], check=False)
+        subprocess.run(['git', 'add', 'last_read.txt'], check=False)
+        result = subprocess.run(['git', 'diff', '--staged', '--quiet'])
+        if result.returncode != 0:
+            subprocess.run(['git', 'commit', '-m', 'Update last read date [skip ci]'], check=False)
+            subprocess.run(['git', 'push'], check=False)
+
+    # 等到北京时间 7:30 (UTC 23:30) 再推送
+    now = time.time()
+    today_start = now - (now % 86400)
+    target = today_start + 23 * 3600 + 30 * 60
+    wait = target - now
+    if wait > 0:
+        logging.info(f"等待 {wait:.0f} 秒至北京时间 7:30 推送...")
+        time.sleep(wait)
 
     if PUSH_METHOD not in (None, ''):
         logging.info("开始推送...")
