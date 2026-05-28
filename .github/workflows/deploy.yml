@@ -6,8 +6,8 @@ concurrency:
 
 on:
   schedule:
-    # 早晨任务：北京时间每天 06:00 触发，配合随机延迟实现 06:00-07:00 之间随机执行
-    - cron: '0 22 * * *'
+    # 早晨任务：北京时间每天 05:00 触发，配合随机延迟实现 05:00-05:20 之间随机执行
+    - cron: '0 21 * * *'
     # 早间任务：北京时间每天 05:00（UTC 前一天 21:00）
     #- cron: '0 21 * * *'
     # 午间任务：北京时间每天 11:40（UTC 03:40）
@@ -23,9 +23,9 @@ jobs:
 
     steps:
 
-    - name: Random delay (0-59 min)
+    - name: Random delay (0-20 min)
       run: |
-        DELAY=$((RANDOM % 3600))
+        DELAY=$((RANDOM % 1200))
         echo "Sleeping for $DELAY seconds ($((DELAY / 60)) min $((DELAY % 60)) sec)"
         sleep $DELAY
 
