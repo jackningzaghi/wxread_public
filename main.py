@@ -70,49 +70,55 @@ def refresh_cookie():
     else:
         ERROR_CODE = "无法获取新密钥或者 WXREAD_CURL_BASH 配置有误，终止运行。"
         logging.error(ERROR_CODE)
-        push(ERROR_CODE, PUSH_METHOD, is_success=False)
         raise Exception(ERROR_CODE)
 
-refresh_cookie()
-index = 1
-lastTime = int(time.time()) - 30
-logging.info(f"一共需要阅读 {READ_NUM} 次。")
+try:
+    refresh_cookie()
+    index = 1
+    lastTime = int(time.time()) - 30
+    logging.info(f"一共需要阅读 {READ_NUM} 次。")
 
-while index <= READ_NUM:
-    data.pop('s')
-    data['b'] = random.choice(book)
-    data['c'] = random.choice(chapter)
-    thisTime = int(time.time())
-    data['ct'] = thisTime
-    data['rt'] = thisTime - lastTime
-    data['ts'] = int(thisTime * 1000) + random.randint(0, 1000)
-    data['rn'] = random.randint(0, 1000)
-    data['sg'] = hashlib.sha256(f"{data['ts']}{data['rn']}{KEY}".encode()).hexdigest()
-    data['s'] = cal_hash(encode_data(data))
+    while index <= READ_NUM:
+        data.pop('s')
+        data['b'] = random.choice(book)
+        data['c'] = random.choice(chapter)
+        thisTime = int(time.time())
+        data['ct'] = thisTime
+        data['rt'] = thisTime - lastTime
+        data['ts'] = int(thisTime * 1000) + random.randint(0, 1000)
+        data['rn'] = random.randint(0, 1000)
+        data['sg'] = hashlib.sha256(f"{data['ts']}{data['rn']}{KEY}".encode()).hexdigest()
+        data['s'] = cal_hash(encode_data(data))
 
-    refresh_print(f"阅读进度: 第 {index}/{READ_NUM} 次，已完成 {(index - 1) * 0.5:.1f} 分钟")
-    logging.debug("data: %s", data)
-    response = requests.post(READ_URL, headers=headers, cookies=cookies, data=json.dumps(data, separators=(',', ':')))
-    resData = response.json()
-    logging.debug("response: %s", resData)
+        refresh_print(f"阅读进度: 第 {index}/{READ_NUM} 次，已完成 {(index - 1) * 0.5:.1f} 分钟")
+        logging.debug("data: %s", data)
+        response = requests.post(READ_URL, headers=headers, cookies=cookies, data=json.dumps(data, separators=(',', ':')))
+        resData = response.json()
+        logging.debug("response: %s", resData)
 
-    if 'succ' in resData:
-        if 'synckey' in resData:
-            lastTime = thisTime
-            index += 1
-            time.sleep(30)
-            refresh_print(f"阅读进度: 第 {min(index, READ_NUM + 1) - 1}/{READ_NUM} 次，已完成 {(index - 1) * 0.5:.1f} 分钟")
+        if 'succ' in resData:
+            if 'synckey' in resData:
+                lastTime = thisTime
+                index += 1
+                time.sleep(30)
+                refresh_print(f"阅读进度: 第 {min(index, READ_NUM + 1) - 1}/{READ_NUM} 次，已完成 {(index - 1) * 0.5:.1f} 分钟")
+            else:
+                logging.warning("无 synckey，尝试修复...")
+                fix_no_synckey()
         else:
-            logging.warning("无 synckey，尝试修复...")
-            fix_no_synckey()
+            logging.warning("cookie 已过期，尝试刷新...")
+            refresh_cookie()
+
+    logging.info("阅读脚本已完成。")
+
+    if PUSH_METHOD not in (None, ''):
+        logging.info("开始推送...")
+        push(f"微信读书自动阅读完成。\n阅读时长：{(index - 1) * 0.5} 分钟。", PUSH_METHOD, is_success=True)
     else:
-        logging.warning("cookie 已过期，尝试刷新...")
-        refresh_cookie()
-
-logging.info("阅读脚本已完成。")
-
-if PUSH_METHOD not in (None, ''):
-    logging.info("开始推送...")
-    push(f"微信读书自动阅读完成。\n阅读时长：{(index - 1) * 0.5} 分钟。", PUSH_METHOD, is_success=True)
-else:
-    logging.info("未配置推送渠道，跳过推送。")
+        logging.info("未配置推送渠道，跳过推送。")
+except Exception as e:
+    error_msg = f"微信读书自动阅读失败。\n错误信息：{e}"
+    logging.error(error_msg)
+    if PUSH_METHOD not in (None, ''):
+        push(error_msg, PUSH_METHOD, is_success=False)
+    raise
