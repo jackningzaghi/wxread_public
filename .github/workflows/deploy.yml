@@ -1,24 +1,13 @@
 name: wxread
 
 on:
-  schedule:
-    # 先行任务：北京时间每天 02:30 触发，配合随机延迟实现 02:30-02:50 之间随机执行
-    - cron: '30 18 * * *'
-    # 候补任务：北京时间每天 04:00 触发，若 02:30 因 Actions 拥堵或仓库不活跃判定导致延迟/跳过，则再次执行阅读，阅读完成后等待至 07:30 推送
-    - cron: '0 20 * * *'
-    # 午间任务：北京时间每天 11:40（UTC 03:40）
-    #- cron: '40 3 * * *'
-    # 晚间任务：北京时间每天 22:00（UTC 14:00）
-    #- cron: '0 14 * * *'
-  workflow_dispatch:  # 手动触发
+  workflow_dispatch:  # 由 cron-job.org 准时触发，也可手动触发
 
 jobs:
   deploy:
     runs-on: ubuntu-22.04
     environment: AutoRead  # 指定环境
-    permissions:
-      contents: write  # 允许 git push last_read.txt
-
+    timeout-minutes: 360  # 随机延迟(~20min) + 阅读(~20min) + 等待至 7:30 推送(~4h+)
     steps:
 
     - name: Random delay (0-20 min)
