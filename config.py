@@ -7,8 +7,15 @@ import re
 默认使用本地值如果不存在从环境变量中获取值
 """
 
-# 阅读次数 默认40次/20分钟
+# 阅读次数 默认40次/20分钟（WEEKLY_TARGET>0 时自动忽略，改用周目标动态计算）
 READ_NUM = int(os.getenv('READ_NUM') or 40)
+# 每周阅读目标（分钟），设为 0 则禁用周目标模式，使用固定 READ_NUM
+WEEKLY_TARGET = int(os.getenv('WEEKLY_TARGET') or 0)
+# 每日最小/最大阅读分钟数（仅周目标模式生效）
+DAILY_MIN = int(os.getenv('DAILY_MIN') or 15)
+DAILY_MAX = int(os.getenv('DAILY_MAX') or 60)
+# 收藏书籍列表（逗号分隔的 book ID），为空则使用全部 12 本书
+FAVORITE_BOOKS = os.getenv('FAVORITE_BOOKS') or ''
 # 需要推送时可选，可选pushplus、wxpusher、telegram
 PUSH_METHOD = "" or os.getenv('PUSH_METHOD')
 # pushplus推送时需填
@@ -44,12 +51,21 @@ headers = {
 }
 
 
-# 书籍
-book = [
+# 书籍（全量）
+_ALL_BOOKS = [
     "36d322f07186022636daa5e","6f932ec05dd9eb6f96f14b9","43f3229071984b9343f04a4","d7732ea0813ab7d58g0184b8",
     "3d03298058a9443d052d409","4fc328a0729350754fc56d4","a743220058a92aa746632c0","140329d0716ce81f140468e",
     "1d9321c0718ff5e11d9afe8","ff132750727dc0f6ff1f7b5","e8532a40719c4eb7e851cbe","9b13257072562b5c9b1c8d6"
 ]
+
+if FAVORITE_BOOKS:
+    favorite_ids = [b.strip() for b in FAVORITE_BOOKS.split(',') if b.strip()]
+    if favorite_ids:
+        book = favorite_ids
+    else:
+        book = _ALL_BOOKS
+else:
+    book = _ALL_BOOKS
 
 # 章节
 chapter = [
