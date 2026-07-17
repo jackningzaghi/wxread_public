@@ -1,0 +1,11 @@
+{
+  "week_start_monday": "2026-07-13",
+  "target_minutes": 300,
+  "days": {
+    "2026-07-17": {
+      "minutes": 80.0,
+      "read_num": 160,
+      "completed_at": "2026-07-17T11:21:36.729128+08:00"
+    }
+  }
+}
