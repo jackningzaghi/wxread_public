@@ -148,9 +148,13 @@ def calculate_daily_target(tracking, today, weekly_target, min_daily, max_daily)
 
 def git_persist():
     """将跟踪文件提交并推送到远程仓库"""
+    import os as _os
     subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=False)
     subprocess.run(['git', 'config', 'user.email', 'github-actions[bot]@users.noreply.github.com'], check=False)
-    subprocess.run(['git', 'add', 'last_read.txt', 'weekly_reading.json'], check=False)
+    # 只添加实际存在的文件，避免 git add 因文件不存在而报错
+    for f in ('last_read.txt', 'weekly_reading.json'):
+        if _os.path.exists(f):
+            subprocess.run(['git', 'add', f], check=False)
     result = subprocess.run(['git', 'diff', '--staged', '--quiet'])
     if result.returncode != 0:
         subprocess.run(['git', 'commit', '-m', 'Update reading progress [skip ci]'], check=False)
@@ -210,6 +214,7 @@ try:
     refresh_cookie()
     index = 1
     lastTime = int(time.time()) - 30
+    consecutive_failures = 0
 
     while index <= read_num:
         data.pop('s')
@@ -231,6 +236,7 @@ try:
         logging.debug("response: %s", resData)
 
         if 'succ' in resData:
+            consecutive_failures = 0
             if 'synckey' in resData:
                 lastTime = thisTime
                 index += 1
@@ -241,7 +247,11 @@ try:
                 logging.warning("无 synckey，尝试修复...")
                 fix_no_synckey()
         else:
-            logging.warning("cookie 已过期，尝试刷新...")
+            consecutive_failures += 1
+            if consecutive_failures > 10:
+                raise Exception(f"连续 {consecutive_failures} 次阅读请求失败，"
+                                f"请检查 book ID 是否正确或 cookie 是否已过期")
+            logging.warning(f"cookie 已过期，尝试刷新...（连续失败 {consecutive_failures}/10）")
             refresh_cookie()
 
     logging.info("阅读脚本已完成。")

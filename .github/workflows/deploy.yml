@@ -16,6 +16,7 @@ jobs:
   deploy:
     runs-on: ubuntu-22.04
     environment: AutoRead  # 指定环境
+    timeout-minutes: 360  # 随机延迟(~20min) + 阅读(最长~60min) + 等待至 7:30 推送(~4h+)
     permissions:
       contents: write  # 允许 git push last_read.txt
 
