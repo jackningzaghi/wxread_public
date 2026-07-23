@@ -285,12 +285,14 @@ try:
     if PUSH_METHOD not in (None, ''):
         logging.info("开始推送...")
         if WEEKLY_TARGET > 0:
+            push_title = f"微信读书 {int(cumulative_after)}/{WEEKLY_TARGET}min"
             push_msg = (f"微信读书自动阅读完成。\n"
                         f"今日阅读：{actual_minutes} 分钟\n"
                         f"本周累计：{cumulative_after}/{WEEKLY_TARGET} 分钟")
         else:
+            push_title = None
             push_msg = f"微信读书自动阅读完成。\n阅读时长：{actual_minutes} 分钟。"
-        push(push_msg, PUSH_METHOD, is_success=True)
+        push(push_msg, PUSH_METHOD, is_success=True, title=push_title)
     else:
         logging.info("未配置推送渠道，跳过推送。")
 except Exception as e:

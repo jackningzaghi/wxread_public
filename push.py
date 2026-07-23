@@ -29,9 +29,10 @@ class PushNotification:
             "https": os.getenv("https_proxy"),
         }
 
-    def push_pushplus(self, content, token, is_success):
+    def push_pushplus(self, content, token, is_success, title=None):
         attempts = 5
-        title = f"微信阅读-{'成功' if is_success else '失败'}"
+        if title is None:
+            title = f"微信阅读-{'成功' if is_success else '失败'}"
         for attempt in range(attempts):
             try:
                 response = requests.post(
@@ -85,11 +86,12 @@ class PushNotification:
                     time.sleep(sleep_time)
         return False
 
-    def push_serverChan(self, content, spt, is_success):
+    def push_serverChan(self, content, spt, is_success, title=None):
         attempts = 5
         url = self.server_chan_url.format(spt)
 
-        title = f"微信阅读-{'成功' if is_success else '失败'}"
+        if title is None:
+            title = f"微信阅读-{'成功' if is_success else '失败'}"
 
         for attempt in range(attempts):
             try:
@@ -111,7 +113,7 @@ class PushNotification:
         return False
 
 
-def push(content, method, is_success = True):
+def push(content, method, is_success=True, title=None):
     notifier = PushNotification()
 
     if method in (None, ""):
@@ -121,13 +123,13 @@ def push(content, method, is_success = True):
     method = str(method).lower()
 
     if method == "pushplus":
-        return notifier.push_pushplus(content, PUSHPLUS_TOKEN, is_success)
+        return notifier.push_pushplus(content, PUSHPLUS_TOKEN, is_success, title)
     if method == "telegram":
         return notifier.push_telegram(content, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID)
     if method == "wxpusher":
         return notifier.push_wxpusher(content, WXPUSHER_SPT)
     if method == "serverchan":
-        return notifier.push_serverChan(content, SERVERCHAN_SPT, is_success)
+        return notifier.push_serverChan(content, SERVERCHAN_SPT, is_success, title)
 
     logger.warning("无效的通知渠道 '%s'，已跳过推送。支持：pushplus、telegram、wxpusher、serverchan", method)
     return False
